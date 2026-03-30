@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Hidden Houston — Weird, Wonderful & Obscure</title>
+  <title>Explore Houston</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet"/>
   <style>
     :root {
@@ -206,8 +206,8 @@
 <header>
   <div class="header-inner">
     <div class="badge">Houston, Texas</div>
-    <h1>Hidden <em>Houston</em></h1>
-    <p class="tagline">A field guide to the weird, wonderful, and gloriously obscure corners of Space City.</p>
+    <h1>Explore <em>Houston</em></h1>
+    <p class="tagline">Discover the best attractions, hidden gems, and unique experiences across Space City.</p>
     <div class="divider"><span></span><span style="color:var(--gold);font-size:.7rem;">✦</span><span></span></div>
   </div>
 </header>
@@ -285,7 +285,7 @@
       <div class="card-head">
         <div class="card-num">03 · Historic</div>
         <div class="card-name">Secret Cistern</div>
-        <span class="cost-badge">$10</span>
+        <span class="cost-badge">$5</span>
       </div>
       <div class="card-body">
         <div class="row-addr">
@@ -963,7 +963,7 @@
 </main>
 
 <footer>
-  Inspired by <em>Secret Houston</em> by William Dylan Powell &nbsp;·&nbsp; 30 Hidden Gems &nbsp;·&nbsp; Space City, TX
+  Copyright © 2026 <em>Pragya Pokhrel</em> &nbsp;·&nbsp; <span id="footer-count">30</span> Hidden Gems &nbsp;·&nbsp; Space City, TX
 </footer>
 
 <script>
@@ -999,6 +999,690 @@
     document.getElementById('no-results').style.display = visible === 0 ? 'block' : 'none';
   }
 </script>
+
+<!-- ── ADD ATTRACTION PANEL (v2 — hardened) ── -->
+<style>
+  /* Floating trigger */
+  #add-btn {
+    position: fixed; bottom: 2rem; right: 2rem;
+    background: var(--rust); color: #fff; border: none;
+    font-family: 'DM Sans', sans-serif; font-size: 0.78rem; font-weight: 500;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    padding: 0.85rem 1.4rem; cursor: pointer;
+    box-shadow: 0 8px 30px rgba(185,79,30,0.45);
+    display: flex; align-items: center; gap: 0.5rem;
+    z-index: 1000; transition: background 0.2s, transform 0.2s;
+  }
+  #add-btn:hover { background: #9e3e12; transform: translateY(-2px); }
+
+  /* Overlay */
+  #panel-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(10,8,4,0.6); z-index: 1100; backdrop-filter: blur(3px);
+  }
+  #panel-overlay.open { display: block; }
+
+  /* Panel */
+  #add-panel {
+    position: fixed; top: 0; right: 0; bottom: 0;
+    width: min(500px, 100vw); background: var(--card-bg);
+    z-index: 1200; transform: translateX(100%);
+    transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  #add-panel.open { transform: translateX(0); }
+
+  .panel-head {
+    background: var(--ink); color: var(--cream);
+    padding: 1.4rem 1.6rem 1.1rem;
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem;
+    flex-shrink: 0;
+  }
+  .panel-head h2 { font-family: 'Playfair Display', serif; font-size: 1.25rem; line-height: 1.2; }
+  .panel-head h2 em { font-style: italic; color: var(--gold); }
+  .panel-head p { font-size: 0.72rem; color: #8a7e6e; margin-top: 0.25rem; }
+  #close-btn { background: transparent; border: none; color: #8a7e6e; cursor: pointer; padding: 0.2rem; transition: color 0.2s; flex-shrink: 0; }
+  #close-btn:hover { color: var(--cream); }
+
+  /* Disclaimer banner */
+  .disclaimer {
+    background: #fff8e6; border-left: 3px solid var(--gold);
+    padding: 0.65rem 1rem; font-size: 0.72rem; color: #5a4a20;
+    line-height: 1.5; flex-shrink: 0;
+  }
+  .disclaimer strong { display: block; margin-bottom: 0.1rem; font-weight: 500; color: #3a2e10; }
+
+  .panel-body {
+    flex: 1; overflow-y: auto; padding: 1.4rem 1.6rem;
+    display: flex; flex-direction: column; gap: 1rem;
+  }
+
+  .field { display: flex; flex-direction: column; gap: 0.35rem; }
+  .field label {
+    font-size: 0.62rem; font-weight: 500; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--rust);
+  }
+  .field input, .field select {
+    background: var(--cream); border: 1px solid var(--border);
+    color: var(--ink); font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem; font-weight: 300;
+    padding: 0.6rem 0.85rem; outline: none;
+    transition: border-color 0.2s; width: 100%;
+  }
+  .field input:focus, .field select:focus { border-color: var(--rust); }
+  .field input.error { border-color: #c0392b; }
+  .field select { cursor: pointer; }
+  .field-hint { font-size: 0.7rem; color: var(--muted); margin-top: 0.15rem; }
+
+  /* Address validation states */
+  .addr-wrap { position: relative; }
+  .addr-wrap input { padding-right: 2.2rem; }
+  .addr-icon {
+    position: absolute; right: 0.7rem; top: 50%; transform: translateY(-50%);
+    display: none; width: 16px; height: 16px;
+  }
+  .addr-icon.ok  { display: block; color: var(--sage); }
+  .addr-icon.err { display: block; color: #c0392b; }
+  .addr-icon.spin-ico { display: flex; align-items: center; justify-content: center; }
+
+  /* Validated place chip */
+  #place-chip {
+    display: none; background: #edf7ee; border: 1px solid var(--sage);
+    padding: 0.45rem 0.75rem; font-size: 0.75rem; color: #2d5a31;
+    line-height: 1.4;
+  }
+  #place-chip.visible { display: block; }
+  #place-chip strong { display: block; font-weight: 500; }
+
+  /* Error message */
+  .field-error {
+    font-size: 0.7rem; color: #c0392b; display: none; margin-top: 0.15rem;
+  }
+  .field-error.visible { display: block; }
+
+  /* Duplicate warning */
+  #dup-warning {
+    background: #fff0f0; border: 1px solid #e74c3c;
+    padding: 0.6rem 0.85rem; font-size: 0.75rem; color: #7b1010;
+    display: none;
+  }
+  #dup-warning.visible { display: block; }
+
+  /* AI status */
+  .ai-status {
+    display: none; align-items: center; gap: 0.6rem;
+    font-size: 0.8rem; color: var(--muted); font-style: italic; padding: 0.4rem 0;
+  }
+  .ai-status.visible { display: flex; }
+  .spinner {
+    width: 14px; height: 14px; border: 2px solid var(--border);
+    border-top-color: var(--rust); border-radius: 50%;
+    animation: spin 0.7s linear infinite; flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Rate limit warning */
+  #rate-warning {
+    background: #fffbe6; border: 1px solid var(--gold);
+    padding: 0.5rem 0.85rem; font-size: 0.72rem; color: #5a4a10;
+    display: none;
+  }
+  #rate-warning.visible { display: block; }
+
+  .panel-foot {
+    padding: 1.1rem 1.6rem; border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  #submit-btn {
+    font-family: 'DM Sans', sans-serif; font-size: 0.78rem; font-weight: 500;
+    letter-spacing: 0.12em; text-transform: uppercase; border: none;
+    padding: 0.85rem 1.4rem; cursor: pointer; background: var(--rust);
+    color: #fff; width: 100%; transition: background 0.2s;
+  }
+  #submit-btn:hover:not(:disabled) { background: #9e3e12; }
+  #submit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  #success-msg {
+    display: none; background: var(--sage); color: #fff;
+    font-size: 0.78rem; font-weight: 500; letter-spacing: 0.08em;
+    text-align: center; padding: 0.6rem;
+  }
+  #success-msg.visible { display: block; }
+</style>
+
+<!-- Google Places autocomplete script — loaded on demand -->
+<script>
+  // ── CONFIGURATION ──────────────────────────────────────────────────────────
+  // Paste your Google Maps API key here (needs Places API enabled).
+  // If left empty, the form falls back to a Nominatim (OpenStreetMap) check.
+  const GMAPS_KEY = '';
+  // ───────────────────────────────────────────────────────────────────────────
+
+  // Rate-limit state (session only — resets on page reload)
+  const RATE_LIMIT = 3;          // max submissions per session
+  const RATE_WINDOW_MS = 600000; // 10 minutes
+  let submissionLog = JSON.parse(sessionStorage.getItem('sh_subs') || '[]');
+
+  // Deduplication registry — built from existing cards on page load
+  const seenPlaceIds  = new Set();
+  const seenAddrs     = new Set();
+  const seenNames     = new Set();
+
+  let validatedPlace = null;   // holds Google Place result or Nominatim result
+  let addrDebounce   = null;
+
+  window.addEventListener('DOMContentLoaded', () => {
+    // Seed dedup registry from existing cards
+    document.querySelectorAll('.card').forEach(card => {
+      const pid = card.dataset.placeId;
+      if (pid) seenPlaceIds.add(pid);
+      const addr = card.querySelector('.row-addr a')?.textContent?.trim().toLowerCase();
+      if (addr) seenAddrs.add(normaliseAddr(addr));
+      const name = card.querySelector('.card-name')?.textContent?.trim().toLowerCase();
+      if (name) seenNames.add(name);
+    });
+
+    // If Google Maps key is set, load the Places library
+    if (GMAPS_KEY) loadGooglePlaces();
+  });
+
+  function loadGooglePlaces() {
+    const s = document.createElement('script');
+    s.src = `https://maps.googleapis.com/maps/api/js?key=${GMAPS_KEY}&libraries=places&callback=initAutocomplete`;
+    s.async = true; s.defer = true;
+    document.head.appendChild(s);
+  }
+
+  function initAutocomplete() {
+    const input = document.getElementById('f-address');
+    const ac = new google.maps.places.Autocomplete(input, {
+      types: ['establishment', 'geocode'],
+      componentRestrictions: { country: 'us' },
+      fields: ['place_id','name','formatted_address','geometry','types']
+    });
+    ac.addListener('place_changed', () => {
+      const place = ac.getPlace();
+      if (!place.geometry) { setAddrState('err', 'Select a suggestion from the dropdown.'); return; }
+      validatedPlace = { placeId: place.place_id, address: place.formatted_address, name: place.name };
+      document.getElementById('f-address').value = place.formatted_address;
+      showPlaceChip(place.name, place.formatted_address);
+      checkDuplicate();
+    });
+    // Remove debounce listener — autocomplete handles it
+    document.getElementById('f-address').oninput = () => {
+      validatedPlace = null;
+      clearPlaceChip();
+      setAddrState('none');
+    };
+  }
+
+  // ── ADDRESS VALIDATION (Photon/OpenStreetMap — CORS-friendly) ───────────
+  // Photon is a geocoder backed by OpenStreetMap data. It works directly from
+  // the browser without CORS issues, unlike raw Nominatim.
+
+  // Quick sanity check before hitting the network: must look like a real address
+  // (has at least one digit, some letters, and is long enough).
+  function looksLikeAddress(s) {
+    return s.length >= 6 && /\d/.test(s) && /[a-zA-Z]/.test(s);
+  }
+
+  // While typing: just clear the old result so the green tick disappears
+  function onAddressTyping() {
+    if (GMAPS_KEY) return;
+    validatedPlace = null;
+    clearPlaceChip();
+    setAddrState('none');
+    clearTimeout(addrDebounce);
+  }
+
+  // On blur (tab away / click elsewhere): fire validation immediately
+  function onAddressBlur() {
+    if (GMAPS_KEY) return;
+    clearTimeout(addrDebounce);
+    const val = document.getElementById('f-address').value.trim();
+    if (!val || val.length < 5) return;
+    validateWithPhoton(val);
+  }
+
+  async function validateWithPhoton(query) {
+    // Pre-flight: reject obvious non-addresses
+    if (!looksLikeAddress(query)) {
+      setAddrState('err', 'Please enter a full street address including a number (e.g. 6501 Memorial Dr, Houston, TX).');
+      return;
+    }
+
+    setAddrState('loading');
+
+    // Append Houston context if not already present
+    const searchQuery = /houston|tx|texas/i.test(query) ? query : query + ', Houston, TX';
+
+    // Try Photon first, then Nominatim, then fall back to local format validation
+    const result = await tryPhoton(searchQuery) || await tryNominatim(searchQuery);
+
+    if (result) {
+      validatedPlace = result;
+      showPlaceChip('✓ Address verified', result.address);
+      setAddrState('ok');
+      checkDuplicate();
+    } else {
+      // Final fallback: if both geocoders fail but address looks well-formed, accept it
+      if (looksLikeFullAddress(query)) {
+        const displayAddress = query.trim();
+        validatedPlace = {
+          placeId : `local-${Date.now()}`,
+          address : displayAddress,
+          lat     : null,
+          lon     : null,
+        };
+        showPlaceChip('✓ Address accepted', displayAddress);
+        setAddrState('ok');
+        checkDuplicate();
+      } else {
+        setAddrState('err', 'Could not verify address. Make sure it includes a street number, street name, and city (e.g. 6501 Memorial Dr, Houston, TX).');
+      }
+    }
+  }
+
+  // Attempt verification via Photon (komoot)
+  async function tryPhoton(searchQuery) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 5000);
+      const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(searchQuery)}&limit=5&lang=en`;
+      const res = await fetch(url, { signal: controller.signal });
+      clearTimeout(timer);
+      if (!res.ok) return null;
+      const data = await res.json();
+      return parsePhotonResult(data.features || []);
+    } catch { return null; }
+  }
+
+  function parsePhotonResult(features) {
+    const match = features.find(f => {
+      const p = f.properties || {};
+      return p.country_code === 'us' && (p.housenumber || p.street || p.name);
+    });
+    if (!match) return null;
+    const p   = match.properties;
+    const geo = match.geometry?.coordinates;
+    let streetPart = '';
+    if (p.housenumber && p.street) streetPart = `${p.housenumber} ${p.street}`;
+    else if (p.street) streetPart = p.street;
+    else if (p.name)  streetPart = p.name;
+    const parts = [streetPart, p.city || p.town || p.village, p.state, p.postcode].filter(Boolean);
+    return {
+      placeId : `photon-${p.osm_id || Date.now()}`,
+      address : parts.join(', '),
+      lat     : geo ? geo[1] : null,
+      lon     : geo ? geo[0] : null,
+    };
+  }
+
+  // Attempt verification via Nominatim (OpenStreetMap)
+  async function tryNominatim(searchQuery) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 5000);
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchQuery)}&format=json&addressdetails=1&limit=5&countrycodes=us`;
+      const res = await fetch(url, {
+        signal: controller.signal,
+        headers: { 'Accept-Language': 'en', 'User-Agent': 'ExploreHouston/1.0' }
+      });
+      clearTimeout(timer);
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (!data || !data.length) return null;
+      // Prefer results with a road/house_number in the address object
+      const match = data.find(r => r.address && (r.address.road || r.address.house_number)) || data[0];
+      if (!match) return null;
+      const a = match.address || {};
+      const streetPart = [a.house_number, a.road].filter(Boolean).join(' ') || a.neighbourhood || match.display_name.split(',')[0];
+      const parts = [streetPart, a.city || a.town || a.village || a.county, a.state, a.postcode].filter(Boolean);
+      return {
+        placeId : `nominatim-${match.osm_id || Date.now()}`,
+        address : parts.join(', '),
+        lat     : match.lat ? parseFloat(match.lat) : null,
+        lon     : match.lon ? parseFloat(match.lon) : null,
+      };
+    } catch { return null; }
+  }
+
+  // Local format check — used as last-resort fallback when geocoders are unreachable
+  // Accepts: starts with a number, has a street word, and mentions TX / Houston / Texas
+  function looksLikeFullAddress(s) {
+    return /^\d+\s+\w/.test(s.trim()) && /\b(houston|tx|texas)\b/i.test(s);
+  }
+
+  // ── UI HELPERS ────────────────────────────────────────────────────────────
+  function setAddrState(state, msg) {
+    const ok  = document.getElementById('addr-ok');
+    const err = document.getElementById('addr-err');
+    const sp  = document.getElementById('addr-spin');
+    const fe  = document.getElementById('addr-field-error');
+    const inp = document.getElementById('f-address');
+    ok.className = 'addr-icon'; err.className = 'addr-icon'; sp.className = 'addr-icon';
+    inp.classList.remove('error');
+    fe.classList.remove('visible'); fe.textContent = '';
+    if (state === 'ok')      { ok.className  = 'addr-icon ok'; }
+    if (state === 'err')     { err.className = 'addr-icon err'; inp.classList.add('error'); fe.textContent = msg || 'Invalid address.'; fe.classList.add('visible'); }
+    if (state === 'loading') { sp.className  = 'addr-icon spin-ico'; sp.innerHTML = '<div class="spinner" style="width:12px;height:12px;border-width:2px"></div>'; }
+  }
+
+  function showPlaceChip(name, addr) {
+    const chip = document.getElementById('place-chip');
+    chip.innerHTML = `<strong>✓ ${escapeHtml(name)}</strong>${escapeHtml(addr)}`;
+    chip.classList.add('visible');
+    setAddrState('ok');
+  }
+
+  function clearPlaceChip() {
+    document.getElementById('place-chip').classList.remove('visible');
+    document.getElementById('dup-warning').classList.remove('visible');
+  }
+
+  // ── DUPLICATE CHECK ────────────────────────────────────────────────────────
+  function checkDuplicate() {
+    if (!validatedPlace) return false;
+    const warn = document.getElementById('dup-warning');
+    const pid  = validatedPlace.placeId?.toString();
+    const addr = normaliseAddr(validatedPlace.address || document.getElementById('f-address').value);
+    const name = document.getElementById('f-name').value.trim().toLowerCase();
+
+    if ((pid && seenPlaceIds.has(pid)) || seenAddrs.has(addr) || (name && seenNames.has(name))) {
+      let dupMsg = '⚠ This attraction already exists in the guide.';
+      if ((pid && seenPlaceIds.has(pid)) || seenAddrs.has(addr)) {
+        dupMsg = '⚠ This address is already in the guide.';
+      } else if (name && seenNames.has(name)) {
+        dupMsg = '⚠ An attraction with this name already exists in the guide.';
+      }
+      warn.textContent = dupMsg;
+      warn.classList.add('visible');
+      return true;
+    }
+    warn.classList.remove('visible');
+    return false;
+  }
+
+  function normaliseAddr(s) {
+    return s.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 40);
+  }
+
+  // ── RATE LIMITING ──────────────────────────────────────────────────────────
+  function isRateLimited() {
+    const now = Date.now();
+    submissionLog = submissionLog.filter(t => now - t < RATE_WINDOW_MS);
+    return submissionLog.length >= RATE_LIMIT;
+  }
+
+  function recordSubmission() {
+    submissionLog.push(Date.now());
+    try { sessionStorage.setItem('sh_subs', JSON.stringify(submissionLog)); } catch {}
+  }
+
+  // ── PANEL OPEN / CLOSE ─────────────────────────────────────────────────────
+  function openPanel() {
+    document.getElementById('add-panel').classList.add('open');
+    document.getElementById('panel-overlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closePanel() {
+    document.getElementById('add-panel').classList.remove('open');
+    document.getElementById('panel-overlay').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  function resetForm() {
+    ['f-name','f-address','f-cost'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('f-category').value = 'Attraction';
+    document.getElementById('f-address').classList.remove('error');
+    clearPlaceChip();
+    setAddrState('none');
+    validatedPlace = null;
+    document.getElementById('ai-status').classList.remove('visible');
+    document.getElementById('rate-warning').classList.remove('visible');
+    document.getElementById('addr-field-error').classList.remove('visible');
+  }
+
+  // ── MAIN SUBMIT ────────────────────────────────────────────────────────────
+  async function addCard() {
+    const name     = document.getElementById('f-name').value.trim();
+    const address  = document.getElementById('f-address').value.trim();
+    const cost     = document.getElementById('f-cost').value.trim() || 'N/A';
+    const category = document.getElementById('f-category').value;
+
+    // 1. Required fields
+    if (!name || name.length < 3) { alert('Please enter a valid attraction name (at least 3 characters).'); return; }
+    if (!address) { alert('Please enter an address.'); return; }
+
+    // 2. Address must be validated
+    if (!validatedPlace) {
+      if (!GMAPS_KEY) {
+        setAddrState('loading');
+        await validateWithPhoton(address);
+        if (!validatedPlace) return; // validation failed
+      } else {
+        setAddrState('err', 'Please select a verified address from the dropdown suggestions.');
+        return;
+      }
+    }
+
+    // 3. Duplicate check
+    if (checkDuplicate()) {
+      alert('This attraction already exists in the guide. Please check for duplicates before adding.');
+      return;
+    }
+
+    // 4. Rate limit
+    if (isRateLimited()) {
+      document.getElementById('rate-warning').classList.add('visible');
+      document.getElementById('rate-warning').textContent =
+        `⏱ You've added ${RATE_LIMIT} attractions recently. Please wait a few minutes before adding more.`;
+      return;
+    }
+
+    // 5. Disable button
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+
+    // 6. Generate description instantly from name + category
+    const descriptionTemplates = {
+      'Art':              n => `An artistic destination showcasing creative works in the heart of Houston.`,
+      'Art Installation': n => `An immersive art installation that transforms its space into a must-see Houston experience.`,
+      'Architecture':     n => `A striking architectural landmark that stands out in Houston's urban landscape.`,
+      'Family Fun':       n => `A fun-filled spot the whole family will enjoy, right here in Houston.`,
+      'Folk Art':         n => `A vibrant folk art treasure celebrating Houston's creative and cultural spirit.`,
+      'Gardens':          n => `Beautiful gardens offering a peaceful green escape within the city.`,
+      'Gardens & Museum': n => `A unique blend of lush gardens and curated exhibits — a true Houston gem.`,
+      'Historic':         n => `A historic site with deep roots in Houston's past, well worth a visit.`,
+      'Landmark':         n => `One of Houston's defining landmarks, recognized by locals and visitors alike.`,
+      'Museum':           n => `An engaging museum that brings Houston's stories and collections to life.`,
+      'Nature':           n => `A natural retreat tucked within Houston, perfect for escaping the city buzz.`,
+      'Only in Texas':    n => `Only in Texas — a one-of-a-kind experience you won't find anywhere else.`,
+      'Outdoors':         n => `An outdoor destination where Houston's nature and open spaces shine.`,
+      'Park':             n => `A welcoming park and one of Houston's favorite spots to unwind outdoors.`,
+      'Quirky Landmark':  n => `One of Houston's most quirky and beloved landmarks — completely unmissable.`,
+      'Sculpture':        n => `A striking sculpture that adds character and conversation to its corner of Houston.`,
+      'Shopping':         n => `A shopping destination with character, offering something different from the usual Houston mall.`,
+      'Attraction':       n => `A standout Houston attraction worth adding to any local or visitor's list.`,
+    };
+    const tpl = descriptionTemplates[category] || descriptionTemplates['Attraction'];
+    const description = tpl(name);
+
+    // 7. Build card
+    const isFree    = cost.toLowerCase() === 'free';
+    const costData  = isFree ? 'free' : 'paid';
+    const badgeClass = isFree ? 'cost-badge free' : 'cost-badge';
+    const allCards  = document.querySelectorAll('.card');
+    const numStr    = String(allCards.length + 1).padStart(2, '0');
+    const mapsUrl   = `https://maps.google.com/?q=${encodeURIComponent(validatedPlace.address || address)}`;
+    const dataName  = (name + ' ' + category + ' ' + address).toLowerCase();
+    const placeId   = validatedPlace.placeId || '';
+
+    const cardHTML = `
+    <div class="card" data-cost="${costData}" data-name="${escapeAttr(dataName)}" data-place-id="${escapeAttr(placeId)}" style="animation-delay:0s">
+      <div class="card-head">
+        <div class="card-num">${numStr} · ${escapeHtml(category)}</div>
+        <div class="card-name">${escapeHtml(name)}</div>
+        <span class="${badgeClass}">${escapeHtml(cost)}</span>
+      </div>
+      <div class="card-body">
+        <div class="row-addr">
+          <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+          <a href="${mapsUrl}" target="_blank">${escapeHtml(validatedPlace.address || address)}</a>
+        </div>
+        <div>
+          <div class="label">What to See</div>
+          <div class="what-to-see">${escapeHtml(description)}</div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div><div class="cost-label">Cost</div><div class="cost-value">${escapeHtml(cost)}</div></div>
+        <a class="map-link" href="${mapsUrl}" target="_blank">
+          <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/></svg>Directions
+        </a>
+      </div>
+    </div>`;
+
+    document.getElementById('grid').insertAdjacentHTML('beforeend', cardHTML);
+
+    // 8. Register in dedup sets
+    if (placeId) seenPlaceIds.add(placeId);
+    seenAddrs.add(normaliseAddr(validatedPlace.address || address));
+    seenNames.add(name.toLowerCase());
+
+    // 9. Record rate-limit entry
+    recordSubmission();
+
+    // 10. Update counts
+    filterCards();
+    updateFooterCount();
+
+    // 11. Success & reset
+    const msg = document.getElementById('success-msg');
+    msg.classList.add('visible');
+    setTimeout(() => msg.classList.remove('visible'), 2800);
+    resetForm();
+    btn.disabled = false;
+    setTimeout(closePanel, 2900);
+  }
+
+  function updateFooterCount() {
+    const total = document.querySelectorAll('.card').length;
+    const fc = document.getElementById('footer-count');
+    if (fc) fc.textContent = total;
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function escapeAttr(str) {
+    return String(str).replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+</script>
+
+<!-- Floating button -->
+<button id="add-btn" onclick="openPanel()">
+  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+    <path d="M12 5v14M5 12h14" stroke-linecap="round"/>
+  </svg>
+  Add Attraction
+</button>
+
+<!-- Overlay -->
+<div id="panel-overlay" onclick="closePanel()"></div>
+
+<!-- Panel -->
+<div id="add-panel">
+  <div class="panel-head">
+    <div>
+      <h2>Add an <em>Attraction</em></h2>
+      <p>Verified addresses only — Claude writes the description for you.</p>
+    </div>
+    <button id="close-btn" onclick="closePanel()">
+      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="disclaimer">
+    <strong>⚠ Accuracy Notice</strong>
+    Please ensure the information you enter is accurate and not misleading.
+    You are responsible for the content you submit.
+  </div>
+
+  <div class="panel-body">
+
+    <div class="field">
+      <label>Attraction Name *</label>
+      <input id="f-name" type="text" maxlength="120"
+             placeholder="e.g. Beer Can House"
+             oninput="document.getElementById('dup-warning').classList.remove('visible')"/>
+    </div>
+
+    <div class="field">
+      <label>Category</label>
+      <select id="f-category">
+        <option value="Attraction">Attraction</option>
+        <option value="Art">Art</option>
+        <option value="Art Installation">Art Installation</option>
+        <option value="Architecture">Architecture</option>
+        <option value="Family Fun">Family Fun</option>
+        <option value="Folk Art">Folk Art</option>
+        <option value="Gardens">Gardens</option>
+        <option value="Gardens &amp; Museum">Gardens &amp; Museum</option>
+        <option value="Historic">Historic</option>
+        <option value="Landmark">Landmark</option>
+        <option value="Museum">Museum</option>
+        <option value="Nature">Nature</option>
+        <option value="Only in Texas">Only in Texas</option>
+        <option value="Outdoors">Outdoors</option>
+        <option value="Park">Park</option>
+        <option value="Quirky Landmark">Quirky Landmark</option>
+        <option value="Sculpture">Sculpture</option>
+        <option value="Shopping">Shopping</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Address * <span style="font-weight:300;text-transform:none;letter-spacing:0;color:var(--muted)">(must be a real, verifiable address)</span></label>
+      <div class="addr-wrap">
+        <input id="f-address" type="text" maxlength="200"
+               placeholder="e.g. 6501 Memorial Dr, Houston, TX"
+               onblur="onAddressBlur()" oninput="onAddressTyping()" autocomplete="off"/>
+        <svg id="addr-ok" class="addr-icon" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+        </svg>
+        <svg id="addr-err" class="addr-icon" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+        </svg>
+        <span id="addr-spin" class="addr-icon"></span>
+      </div>
+      <div id="addr-field-error" class="field-error"></div>
+      <div class="field-hint" id="addr-hint">
+        Type your address then press <strong>Tab</strong> or click another field — it verifies instantly.
+      </div>
+    </div>
+
+    <div id="place-chip"></div>
+    <div id="dup-warning"></div>
+
+    <div class="field">
+      <label>Cost</label>
+      <input id="f-cost" type="text" maxlength="60" placeholder="e.g. Free · $5 · Varies"/>
+    </div>
+
+    <div id="rate-warning"></div>
+
+  </div>
+
+  <div id="success-msg">✦ Attraction added to your guide!</div>
+
+  <div class="panel-foot">
+    <button id="submit-btn" onclick="addCard()">Add to Guide →</button>
+  </div>
+</div>
 
 </body>
 </html>
